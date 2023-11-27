@@ -1,0 +1,6 @@
+MAIN    START
+        IN      IBUF,ILEN       ; 文字の入力
+        RET
+IBUF    DS      16              ; 入力された文字が入る領域（IN命令で指定）
+ILEN    DS      1               ; 入力された文字数が入る領域（IN命令で指定）
+	END

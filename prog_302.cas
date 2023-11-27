@@ -1,0 +1,16 @@
+PRG302  START
+        OUT     OBUF1,OLEN1
+LOOP    IN      IOBUF,IOLEN
+        OUT     OBUF2,OLEN2
+        OUT     IOBUF,IOLEN
+        OUT     OBUF3,OLEN3
+        JUMP    LOOP
+OBUF1   DC      'LET''S START. TYPE IN'
+OLEN1   DC      20
+OBUF2   DC      'YOU TYPED'
+OLEN2   DC      9
+OBUF3   DC      'WHAT''S NEXT?'
+OLEN3	DC	12
+IOBUF   DS      256
+IOLEN   DS      1
+     	END

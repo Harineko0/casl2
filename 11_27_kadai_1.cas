@@ -1,0 +1,11 @@
+MAIN    START
+        LAD     GR0,0       ; GR0 に和を求めていくので、まずは0で初期化する
+        LAD     GR1,1       ; インデックスレジスタ（ループ回数をカウントするレジスタ） GR1 の初期化
+LOOP    CPA     GR1,NUM     ; インデックスレジスタとループさせる回数を比較する
+        JPL     DONE        ; ループ終了なら DONE にジャンプする
+		ADDA    GR0, GR1    ; GR0 に xxx を加える
+        ADDA    GR1, =1     ; インデックスレジスタの値を 1 増やす
+        JUMP    LOOP        ; ループの最初にジャンプする
+DONE    RET
+NUM     DC      100
+        END

@@ -1,0 +1,34 @@
+MAIN    START
+LOOPIN  IN      IBUF,ILEN       ; 文字の入力
+        XOR     GR1,GR1         ; GR1を0に初期化. GR1: インデックスレジスタ
+        XOR     GR2,GR2         ; GR2を0に初期化. GR2: 各桁の合計が入るレジスタ
+        CPA     GR1,ILEN        
+        JZE     DONE            ; ILEN == GR1 なら終わる (GR1は0)
+LOOPNUM CPA     GR1,ILEN        ; インデックスレジスタとループさせる回数を比較する. LOOPNUMは各桁の合計を求めるループ
+        JZE     LOOP90          ; ループ終了ならLOOP9にジャンプする
+        LAD     GR0,#000F       ; 000FとのANDをとって下位の4ビットを取り出せば2進数 (0000 0000 0000 0101) になる
+        AND     GR0,IBUF,GR1    ; GR0 は(GR1)桁目の数値
+        ADDA    GR2,GR0         ; GR2 += GR0
+        ADDA    GR1,=1          ; GR1++
+        JUMP    LOOPNUM         ; ループの最初にジャンプする
+LOOP90  SUBA    GR2, =90        ; GR2 -= 90 (引き放し法)
+        CPA     GR2, ZERO
+        JPL     LOOP90          ; GR2が正のとき LOOP90 へ
+LOOP9   JZE     OUT9
+        ADDA    GR2, =9         ; GR2 += 9
+        CPA     GR2, ZERO       ; GR2が負のとき LOOP9 へ
+        JMI     LOOP9           ; GR2 < 0
+        JZE     OUT9            ; GR2 == ZERO のとき "MULTIPLE OF 9" と出力, GR2 != 0 のとき "NON-MULTIPLE OF 9" と出力
+        OUT     NOT9BUF,NOT9LEN
+        JUMP    AGAIN
+OUT9    OUT     IS9BUF,IS9LEN
+AGAIN   JUMP    LOOPIN          ; 文字の入力へ戻る
+DONE    RET
+IBUF    DS      256             ; 入力された文字が入る領域（IN命令で指定）
+ILEN    DS      1               ; 入力された文字数が入る領域（IN命令で指定）
+ZERO    DC      0               ; 0との比較に用いる
+IS9BUF  DC      'MULTIPLE OF 9'
+IS9LEN  DC      13
+NOT9BUF DC      'NON-MULTIPLE OF 9'
+NOT9LEN DC      17
+	END

@@ -1,0 +1,16 @@
+MAIN    START
+        IN      IBUF,ILEN       ; 文字の入力
+        XOR     GR1,GR1         ; GR1を0に初期化
+LOOP    CPA     GR1,ILEN        ; インデックスレジスタとループさせる回数を比較する
+        JZE     DONE            ; ループ終了ならDONEにジャンプする
+        LD      GR0,IBUF,GR1    ; 入力された文字の XX 番目をGR0に読み込む
+        ST      GR0,BUF         ; 1文字をバッファに保存する
+        OUT     BUF,ONE         ; 1文字出力する
+        ADDA    GR1, =1         ; インデックスレジスタの値を1増やす
+        JUMP    LOOP            ; ループの最初にジャンプする
+DONE    RET
+IBUF    DS      256             ; 入力された文字が入る領域（IN命令で指定）
+ILEN    DS      1               ; 入力された文字数が入る領域（IN命令で指定）
+ONE     DC      1               ; OUT命令で出力する文字数を指定するときに利用
+BUF     DS      1               ; OUT命令で出力する文字をここにいれておく
+	END
