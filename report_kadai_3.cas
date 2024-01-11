@@ -1,15 +1,78 @@
 MAIN      START
-          LD      GR1, =-100
-          LD      GR2, =12
-          PUSH    0, GR1
-          PUSH    0, GR2
-          CALL    MULT
+          CALL    INPUT
           POP     GR0 ; result
+          RET
           END
 
 ;-------------------------------------------------------
+; OUTPUT(n) -> void. args: [n, RETURN], RETURN: [RETURN]
+OUTPUT    START
+          POP     GR7
+          
+          PUSH    0, GR7
+          RET
+          END
 
-MULT      START ; MULT(a, b) -> a * b. args: [a, b, RETURN], return: [result, RETURN]
+;-------------------------------------------------------
+; INPUT() -> number. args: [RETURN], return: [number, RETURN]
+INPUT     START
+          POP     GR7
+          IN      IBUF, ILEN
+          LD      GR1, ILEN ; GR1 = i = ILEN (1桁目から始める)
+          SUBA    GR1, ONE ; i -= 1
+          LAD     GR2, #0001 ; GR2 = 10^i
+          XOR     GR3, GR3 ; GR3 = result
+          LD      GR4, MINUS
+          CPA     GR4, IBUF ; GR4 == '-'
+          JNZ     NEXT
+          LAD     GR4, 1 ; GR4 = 負の数(1)
+          ADDA    GR1, ONE ; i++
+NEXT      LAD     GR4, 0 ; GR4 = 正の数(0)
+; i = ILEN - 1, i >= 0; i--
+LOOP      CPA     GR1, ZERO
+          JMI     BREAK ; i < 0 なら抜ける
+          LAD     GR5, #000F
+          AND     GR5, IBUF, GR1 ; GR5 = i桁目の数字
+
+          PUSH    0, GR1 ; 退避
+          PUSH    0, GR3 ; 退避
+          PUSH    0, GR4 ; 退避
+          PUSH    0, GR7
+          PUSH    0, GR2 ; 退避
+          PUSH    0, GR2 ; 10^i
+          PUSH    0, GR5 ; i桁目の数字
+          CALL    MULT
+          POP     GR5 ; かけ算結果
+          POP     GR2 ; 10^i
+          PUSH    0, GR5 ; GR2とGR5の順番入れ替え
+          PUSH    0, GR2
+          LAD     GR1, 10 ; 10をPUSH
+          PUSH    0, GR1
+          CALL    MULT
+          POP     GR2
+          POP     GR5
+          POP     GR7
+          POP     GR4 ; 復帰
+          POP     GR3 ; 復帰
+          POP     GR1 ; 復帰
+
+          ADDA    GR3, GR5 ; result += GR5
+          SUBA    GR1, ONE ; i--
+          JUMP    LOOP
+BREAK     PUSH    0, GR3 ; result
+          PUSH    0, GR7
+          RET
+IBUF      DS      6       ; -32768-32767なので6
+ILEN      DS      1
+MINUS     DC      '-'
+ZERO      DC      0
+ONE       DC      1
+          END
+
+;-------------------------------------------------------
+; MULT(a, b) -> a * b. args: [a, b, RETURN], return: [result, RETURN]
+; use: GR1, GR2, GR3, GR4, GR5, GR7
+MULT      START
           POP     GR7 ; GR7 = RETURN
           POP     GR2 ; GR2 = b
           POP     GR1 ; GR1 = a
