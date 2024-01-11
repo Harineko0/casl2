@@ -1,34 +1,74 @@
-MAIN    START
-LOOPIN  IN      IBUF,ILEN       ; 文字の入力
-        XOR     GR1,GR1         ; GR1を0に初期化. GR1: インデックスレジスタ
-        XOR     GR2,GR2         ; GR2を0に初期化. GR2: 各桁の合計が入るレジスタ
-        CPA     GR1,ILEN        
-        JZE     DONE            ; ILEN == GR1 なら終わる (GR1は0)
-LOOPNUM CPA     GR1,ILEN        ; インデックスレジスタとループさせる回数を比較する. LOOPNUMは各桁の合計を求めるループ
-        JZE     LOOP90          ; ループ終了ならLOOP9にジャンプする
-        LAD     GR0,#000F       ; 000FとのANDをとって下位の4ビットを取り出せば2進数 (0000 0000 0000 0101) になる
-        AND     GR0,IBUF,GR1    ; GR0 は(GR1)桁目の数値
-        ADDA    GR2,GR0         ; GR2 += GR0
-        ADDA    GR1,=1          ; GR1++
-        JUMP    LOOPNUM         ; ループの最初にジャンプする
-LOOP90  SUBA    GR2, =90        ; GR2 -= 90 (引き放し法)
-        CPA     GR2, ZERO
-        JPL     LOOP90          ; GR2が正のとき LOOP90 へ
-LOOP9   JZE     OUT9
-        ADDA    GR2, =9         ; GR2 += 9
-        CPA     GR2, ZERO       ; GR2が負のとき LOOP9 へ
-        JMI     LOOP9           ; GR2 < 0
-        JZE     OUT9            ; GR2 == ZERO のとき "MULTIPLE OF 9" と出力, GR2 != 0 のとき "NON-MULTIPLE OF 9" と出力
-        OUT     NOT9BUF,NOT9LEN
-        JUMP    AGAIN
-OUT9    OUT     IS9BUF,IS9LEN
-AGAIN   JUMP    LOOPIN          ; 文字の入力へ戻る
-DONE    RET
-IBUF    DS      256             ; 入力された文字が入る領域（IN命令で指定）
-ILEN    DS      1               ; 入力された文字数が入る領域（IN命令で指定）
-ZERO    DC      0               ; 0との比較に用いる
-IS9BUF  DC      'MULTIPLE OF 9'
-IS9LEN  DC      13
-NOT9BUF DC      'NON-MULTIPLE OF 9'
-NOT9LEN DC      17
-	END
+MAIN      START
+          LD      GR1, =2
+          LD      GR2, =3
+          LAD     GR3, PROD
+          CALL    MULT
+          LD      GR1, PROD
+NEXT      LAD     GR1, IN1    ; 入力結果を入れてもらう番地
+          CALL    INPUT
+          LD      GR1, IN1
+          JZE     FIN        ; 最初の入力が0なら終了
+          LAD     GR1, IN2    ; 入力結果を入れてもらう番地
+          CALL    INPUT
+          LD      GR1, IN1
+          LD      GR2, IN2
+          LAD     GR3, PROD
+          CALL    MULT
+          LD      GR1, PROD
+          CALL    OUTPUT
+          JUMP    NEXT
+FIN       RET
+IN1       DS      1
+IN2       DS      1
+PROD      DS      1
+          END
+
+INPUT     START   ; GR1の番地に入力された数字を格納. ワーク変数= GR2: (i = 0; i < ILEN; i++) の i, GR3: 計算結果, GR4 はループで使う1桁の数字
+          IN      IBUF, ILEN
+          XOR     GR2, GR2
+          XOR     GR3, GR3
+INLOOP    CPA     GR2, ILEN
+          JZE     INFIN           ; GR2 == ILENならループ抜ける
+          LAD     GR4, #000F       ; 000FとのANDをとって下位の4ビットを取り出せば2進数になる
+          AND     GR4, IBUF, GR2    ; GR4 に(GR2)桁目の数字を格納
+          PUSH    0, GR1
+          PUSH    0, GR2
+          PUSH    0, GR3
+          LD      GR1, GR4        ; MULT呼び出し準備
+          LD      GR2, =10
+          LAD     GR3, IPROD
+          CALL    MULT            ; GR4 *= 10
+          LD      GR4, IPROD
+          POP     GR7             ; 戻り番地をPOP
+          POP     GR3             ; レジスタを復帰
+          POP     GR2
+          POP     GR1
+          ADDA    GR3, GR4         ; GR3 += GR4
+          ADDA    GR2, =1         ; GR2 += 1
+          JUMP    INLOOP
+INFIN     ST      GR3, 0, GR1
+          RET
+IBUF      DS      6       ; -32768-32767なので6
+ILEN      DS      1
+IPROD     DS      1
+          END
+
+MULT      START   ; GR1*GR2 の結果を GR3 の番地に格納. ワーク変数= GR4: 計算結果で初期値0
+                ; ex: 3 * 5 = (11) * (101). 11を2ビットシフトしたものと0ビットシフトしたものを足す (1100 + 11 = 1111)
+                ; アルゴリズム: GR2 と #0001 のANDをとる. 1ならGR4 += GR1する. GR1を左シフト, GR2を右シフト. GR2がゼロなら抜ける, そうでなければ初めに戻る
+          XOR     GR4, GR4         ; GR4を0初期化
+MULLOOP   AND     GR2, =1
+          JZE     MULNEXT         ;　1なら　GR4+=GR1
+          ADDA    GR4, GR1
+MULNEXT   SLA     GR1, 1
+          SRA     GR2, 1
+          CPA     GR2, =0          ; GR2が0なら抜ける
+          JZE     MULFIN
+          JUMP    MULLOOP
+MULFIN    ST      GR4, 0, GR3       ; GR3のアドレスにGR4を入れる
+          RET
+          END
+
+OUTPUT    START
+          RET
+          END
