@@ -10,7 +10,11 @@ MAIN      START
 FACT      START
           POP     GR7
           POP     GR1 ;n
-          LD      GR2, GR1
+          SUBA    GR1, =0
+          JNZ     NOTZERO
+          LD      GR1, =1
+          JUMP    FINISH
+NOTZERO   LD      GR2, GR1
           SUBA    GR2, =1 ; GR2 = n - 1
           JZE     FINISH ; n == 1 のとき
           PUSH    0, GR7
@@ -25,17 +29,17 @@ FINISH    PUSH    0, GR1
           RET
           END
 
-
 ;-------------------------------------------------------
-; OUTPUT(n) -> void. args: [n, RETURN], return: [RETURN]
+;OUTPUT(n) -> void. args: [n, RETURN], return: [RETURN]
 OUTPUT    START
           POP     GR7
           POP     GR1 ; 表示する数n
           XOR     GR2, GR2 ; 文字数 len
           XOR     GR5, GR5
           CPA     GR1, ZERO
-          JPL     LOOP
-          LAD     GR5, 1 ; GR5=GR1が負(1)
+          JMI     NEGATIVE
+          JUMP    LOOP
+NEGATIVE  LAD     GR5, 1 ; GR5=GR1が負(1)
           XOR     GR1, MASK ; ビット反転
           ADDA    GR1, =1
 LOOP      PUSH    0, GR2

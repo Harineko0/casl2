@@ -1,0 +1,111 @@
+MAIN      START
+          CALL    RES1
+          RET
+          END
+
+;-------------------------------------------------------
+;1席の予約機能
+RES1      START
+          ;初期化
+          LD      GR0, =#2330      ; 初期値 #2330 を GR0 にロード
+          ST      GR0, RES
+          ;予約
+          LD      GR0, RES
+          XOR     GR1, GR1; 座席番号
+          LD      GR2, MASK
+LOOP      LD      GR3, GR0 ; GR3 = RESのコピー
+          AND     GR3, GR2
+          JZE     YES
+          LAD     GR1, 1, GR1
+          SRL     GR2, 1
+          JZE     NO
+          JUMP    LOOP
+YES       OUT     YESMSG, YESLEN
+          PUSH    0, GR1
+          CALL    OUTPUT
+          OR      GR0, GR2
+          ST      GR0, RES
+          JUMP    DONE
+NO        OUT     NOMSG, NOLEN
+DONE      RET
+RES       DS      1
+MASK      DC      #8000
+YESMSG    DC      'Success to reserve:'
+YESLEN    DC      19
+NOMSG     DC      'There are no available seat.'
+NOLEN     DC      29
+          END
+
+;-------------------------------------------------------
+;OUTPUT(n) -> void. args: [n, RETURN], return: [RETURN]
+OUTPUT    START
+          POP     GR7
+          POP     GR1 ; 表示する数n
+          XOR     GR2, GR2 ; 文字数 len
+          XOR     GR5, GR5
+          CPA     GR1, ZERO
+          JMI     NEGATIVE
+          JUMP    LOOP
+NEGATIVE  LAD     GR5, 1 ; GR5=GR1が負(1)
+          XOR     GR1, MASK ; ビット反転
+          ADDA    GR1, =1
+LOOP      PUSH    0, GR2
+          PUSH    0, GR7
+          PUSH    0, GR1
+          LAD     GR3, 10 ; GR3 = 10
+          PUSH    0, GR3
+          CALL    DIV
+          POP     GR3 ; GR3 = GR1 % 10
+          POP     GR1 ; GR1 = GR1 / 10
+          POP     GR7
+          POP     GR2
+          LAD     GR4, #0030
+          ADDA    GR3, GR4; 数字を文字に変換(GR3 + #0030)
+          ST      GR3, OBUFINV, GR2 ; 文字を保存
+          LAD     GR2, 1, GR2 ; GR2(len)++
+          CPA     GR1, =0 ; a/b == 0ならば
+          JZE     BREAK
+          JUMP    LOOP
+BREAK     XOR     GR3, GR3 ; ループ変数 i
+          SUBA    GR2, =1 ; GR2はlengthで1多いので, 1引く
+          CPA     GR5, ZERO ; nが負の数である(GR5==1)ならば
+          JZE     LOOPINV
+          LD      GR4, MINUS
+          ST      GR4, OBUF, GR3
+          ADDA    GR3, =1
+LOOPINV   CPA     GR2, =0
+          JMI     FINISH
+          LD      GR4, OBUFINV, GR2 ; 順番入れ替え (OBUFINV -> OBUF)
+          ST      GR4, OBUF, GR3
+          SUBA    GR2, =1
+          ADDA    GR3, =1
+          JUMP    LOOPINV
+FINISH    ST      GR3, OLEN
+          OUT     OBUF, OLEN
+          PUSH    0, GR7
+          RET
+OBUF      DS      6
+OLEN      DS      1
+OBUFINV   DS      6 ; OBUFを逆順に並べたもの
+ZERO      DC      0
+MINUS     DC      '-'
+MASK      DC      #FFFF
+          END
+
+;-------------------------------------------------------
+; DIV(a, b) -> [a / b, a % b]. args: [a, b, RETURN], return: [a / b, a % b, RETURN]
+DIV       START
+          POP     GR7 ;RETURN
+          POP     GR2 ;b
+          POP     GR1 ;a
+          XOR     GR3, GR3 ; 商
+LOOP      SUBA    GR1, GR2
+          JMI     BREAK
+          LAD     GR3, 1, GR3
+          JUMP    LOOP
+BREAK     ADDA    GR1, GR2
+          PUSH    0, GR3 ; 商 a/b
+          PUSH    0, GR1 ; 余り a%b
+          PUSH    0, GR7 ; RETURN
+          RET
+          END
