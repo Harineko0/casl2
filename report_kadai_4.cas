@@ -1,15 +1,80 @@
 MAIN      START
-          CALL    RES1
+          CALL    RESCNT
           RET
           END
 
 ;-------------------------------------------------------
-;1席の予約機能
+; 予約数の確認機能
+RESCNT    START
+          ;初期化
+          LD      GR0, =#0001      ; 初期値 #2330 を GR0 にロード
+          ST      GR0, RES
+          ;以下プログラム本体
+          LD      GR0, RES
+          XOR     GR1, GR1 ;counter
+LOOP      LD      GR2, GR0
+          AND     GR2, ONE
+          JZE     CONTINUE ;このビットが1ならば
+          ADDA    GR1, ONE ;counter++
+CONTINUE  SRL     GR0, 1
+          JZE     BREAK
+          JUMP    LOOP
+BREAK     PUSH    0, GR1
+          CALL    OUTPUT
+          RET
+RES       DS      1
+ONE       DC      1
+          END
+;-------------------------------------------------------
+; 2席の予約機能
+; RES2() -> void.
+RES2      START
+          ;初期化
+          LD      GR0, =#9000      ; 初期値 #2330 を GR0 にロード
+          ST      GR0, RES
+          ;以下プログラム本体
+          LD      GR0, RES
+          XOR     GR1, GR1; 座席番号
+          LD      GR2, MASK
+LOOP      LD      GR3, GR0 ; GR3 = RESのコピー
+          AND     GR3, GR2
+          JZE     YES
+          LAD     GR1, 2, GR1
+          SRL     GR2, 2
+          JZE     NO
+          JUMP    LOOP
+YES       OUT     YESMSG, YESLEN
+          PUSH    0, GR1
+          PUSH    0, GR1
+          CALL    OUTPUT
+          POP     GR1
+          OUT     ANDMSG, ANDLEN
+          LAD     GR1, 1, GR1
+          PUSH    0, GR1
+          CALL    OUTPUT
+          OR      GR0, GR2
+          ST      GR0, RES
+          JUMP    DONE
+NO        OUT     NOMSG, NOLEN
+DONE      RET
+RES       DS      1
+MASK      DC      #C000
+YESMSG    DC      'Success to reserve:'
+YESLEN    DC      19
+ANDMSG    DC      'and'
+ANDLEN    DC      3
+NOMSG     DC      'No seats available.'
+NOLEN     DC      19
+          END
+
+;-------------------------------------------------------
+; 1席の予約機能
+; RES1() -> void.
 RES1      START
           ;初期化
           LD      GR0, =#2330      ; 初期値 #2330 を GR0 にロード
           ST      GR0, RES
-          ;予約
+          ;以下プログラム本体
           LD      GR0, RES
           XOR     GR1, GR1; 座席番号
           LD      GR2, MASK
@@ -32,8 +97,8 @@ RES       DS      1
 MASK      DC      #8000
 YESMSG    DC      'Success to reserve:'
 YESLEN    DC      19
-NOMSG     DC      'There are no available seat.'
-NOLEN     DC      29
+NOMSG     DC      'No seats available.'
+NOLEN     DC      19
           END
 
 ;-------------------------------------------------------
