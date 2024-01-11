@@ -1,21 +1,31 @@
 MAIN      START
-        ;   CALL    INPUT
-        ;   POP     GR1 ; result
-          LAD     GR1, 123
-          PUSH    0, GR1
+          CALL    INPUT
+          CALL    FACT
           CALL    OUTPUT
-        ;   LAD     GR1, 12
-        ;   LAD     GR2, 10
-        ;   PUSH    0, GR1
-        ;   PUSH    0, GR2
-        ;   CALL    DIV
-        ;   POP     GR2
-        ;   POP     GR1
           RET
           END
 
 ;-------------------------------------------------------
-; OUTPUT(n) -> void. args: [n, RETURN], RETURN: [RETURN]
+; FACT(n) -> n!. args: [n, RETURN], return: [n!, RETURN]
+FACT      START
+          POP     GR7
+          POP     GR1 ;n
+          LD      GR2, GR1
+          SUBA    GR2, =1 ; GR2 = n - 1
+          JZE     FINISH ; n == 1 のとき
+          PUSH    0, GR7
+          PUSH    0, GR1
+          PUSH    0, GR2
+          CALL    FACT ; GR2に対してFACTを呼び出す
+          CALL    MULT
+          POP     GR1 ; GR1 = GR1 * GR2
+          POP     GR7
+FINISH    PUSH    0, GR1
+          PUSH    0, GR7
+          RET
+          END
+;-------------------------------------------------------
+; OUTPUT(n) -> void. args: [n, RETURN], return: [RETURN]
 OUTPUT    START
           POP     GR7
           POP     GR1 ; 表示する数n
@@ -57,7 +67,7 @@ OBUFINV   DS      6 ; OBUFを逆順に並べたもの
 ZERO      DC      0
           END
 
-;-------------------------------------------------------
+;region-------------------------------------------------------
 ; INPUT() -> number. args: [RETURN], return: [number, RETURN]
 INPUT     START
           POP     GR7
@@ -132,7 +142,6 @@ BREAK     ADDA    GR1, GR2
           END
 ;-------------------------------------------------------
 ; MULT(a, b) -> a * b. args: [a, b, RETURN], return: [result, RETURN]
-; use: GR1, GR2, GR3, GR4, GR5, GR7
 MULT      START
           POP     GR7 ; GR7 = RETURN
           POP     GR2 ; GR2 = b
@@ -185,8 +194,8 @@ MASK      DC      #FFFF
           END
 
 ;-------------------------------------------------------
-
-ABS       START ; ABS(a) -> |a|. args: [a, RETURN], return: [|a|, RETURN]
+; ABS(a) -> |a|. args: [a, RETURN], return: [|a|, RETURN]
+ABS       START
           POP     GR7 ; GR7 = RETURN
           POP     GR1 ; GR0 = a
           CPA     GR1, ZERO
