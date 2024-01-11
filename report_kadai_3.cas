@@ -1,21 +1,32 @@
 MAIN      START
-          LD      GR1, =100
-          LD      GR2, =12
+          LD      GR1, =-100
+          LD      GR2, =-12
           PUSH    0, GR1
           PUSH    0, GR2
-          CALL    MULT
+          CALL    ABS
           POP     GR0 ; result
           END
 
-MULT      START ; MULT(a, b) -> a * b. args: (a, b, RETURN), return: (result, RETURN)
-          POP     GR7 ;RETURN
-          POP     GR1 ;b マスク用
-          POP     GR0 ;a
-          XOR     GR2, GR2 ;result = 0
+MULT      START ; MULT(a, b) -> a * b. args: [a, b, RETURN], return: [result, RETURN]
+          POP     GR7 ; GR7 = RETURN
+          POP     GR1 ; GR1 = b
+          POP     GR0 ; GR0 = a
+          XOR     GR2, GR2 ; GR2 = result
+
+          LD      GR3, GR0 ; GR3 = 負の数かどうか
+          XOR     GR3, GR1
+          SRL     GR3, 15
+
+        ;   RPUSH
+        ;   PUSH    0, GR1
+        ;   CALL    ABS
+        ;   POP     GR0
+        ;   RPOP
+
 LOOP      CPA     GR1, =0 ; b == 0 ?
           JZE     BREAK ;b == 0なら抜ける
-          LD      GR3, GR1 ; bをGR3にコピー
-          AND     GR3, ONE ; b &= 1
+          LD      GR4, GR1 ; bをGR3にコピー
+          AND     GR4, ONE ; b &= 1
           JZE     NEXT ; b の1bit目が0ならNEXTへ
           ADDA    GR2, GR0 ; result += a を左シフトしたもの
 NEXT      SRL     GR1, 1 ; b >> 1
@@ -25,4 +36,18 @@ BREAK     PUSH    0, GR2
           PUSH    0, GR7
           RET
 ONE       DC      1
+          END
+
+ABS       START ; ABS(a) -> |a|. args: [a, RETURN], return: [|a|, RETURN]
+          POP     GR7 ; GR7 = RETURN
+          POP     GR1 ; GR0 = a
+          CPA     GR1, ZERO
+          JPL     ONPLUS ; GR0 > 0 なら抜ける
+          XOR     GR1, MASK ; 符号反転
+          ADDA    GR1, =1
+ONPLUS    PUSH    0, GR1
+          PUSH    0, GR7
+          RET
+ZERO      DC      0
+MASK      DC      #FFFF
           END
