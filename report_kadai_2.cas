@@ -61,7 +61,7 @@ MINUS     DC      '-'
 MASK      DC      #FFFF
           END
 
-;region-------------------------------------------------------
+;-------------------------------------------------------
 ; INPUT() -> number. args: [RETURN], return: [number, RETURN]
 INPUT     START
           POP     GR7
@@ -71,11 +71,6 @@ INPUT     START
           LAD     GR2, #0001 ; GR2 = 10^i
           XOR     GR3, GR3 ; GR3 = result
           LD      GR4, MINUS
-;           CPA     GR4, IBUF ; GR4 == '-'
-;           JNZ     NEXT
-;           LAD     GR4, 1 ; GR4 = 負の数(1)
-;           ADDA    GR1, ONE ; i++
-; NEXT      LAD     GR4, 0 ; GR4 = 正の数(0)
 LOOP      CPA     GR1, =0 ; i = ILEN - 1, i >= 0; i--
           JMI     BREAK ; i < 0 なら抜ける
           LD      GR5, IBUF, GR1

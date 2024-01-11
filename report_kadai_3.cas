@@ -24,12 +24,20 @@ FINISH    PUSH    0, GR1
           PUSH    0, GR7
           RET
           END
+
+
 ;-------------------------------------------------------
 ; OUTPUT(n) -> void. args: [n, RETURN], return: [RETURN]
 OUTPUT    START
           POP     GR7
           POP     GR1 ; 表示する数n
           XOR     GR2, GR2 ; 文字数 len
+          XOR     GR5, GR5
+          CPA     GR1, ZERO
+          JPL     LOOP
+          LAD     GR5, 1 ; GR5=GR1が負(1)
+          XOR     GR1, MASK ; ビット反転
+          ADDA    GR1, =1
 LOOP      PUSH    0, GR2
           PUSH    0, GR7
           PUSH    0, GR1
@@ -47,27 +55,33 @@ LOOP      PUSH    0, GR2
           CPA     GR1, =0 ; a/b == 0ならば
           JZE     BREAK
           JUMP    LOOP
-BREAK     ST      GR2, OLEN ; OLEN = len
-; 順番入れ替え (OBUFINV -> OBUF)
-          XOR     GR3, GR3 ; ループ変数 i
-          SUBA    GR2, =1 ; GR2はlengthなので1多い
+BREAK     XOR     GR3, GR3 ; ループ変数 i
+          SUBA    GR2, =1 ; GR2はlengthで1多いので, 1引く
+          CPA     GR5, ZERO ; nが負の数である(GR5==1)ならば
+          JZE     LOOPINV
+          LD      GR4, MINUS
+          ST      GR4, OBUF, GR3
+          ADDA    GR3, =1
 LOOPINV   CPA     GR2, =0
           JMI     FINISH
-          LD      GR4, OBUFINV, GR2
-TEST      ST      GR4, OBUF, GR3
+          LD      GR4, OBUFINV, GR2 ; 順番入れ替え (OBUFINV -> OBUF)
+          ST      GR4, OBUF, GR3
           SUBA    GR2, =1
           ADDA    GR3, =1
           JUMP    LOOPINV
-FINISH    OUT     OBUF, OLEN
+FINISH    ST      GR3, OLEN
+          OUT     OBUF, OLEN
           PUSH    0, GR7
           RET
 OBUF      DS      6
 OLEN      DS      1
 OBUFINV   DS      6 ; OBUFを逆順に並べたもの
 ZERO      DC      0
+MINUS     DC      '-'
+MASK      DC      #FFFF
           END
 
-;region-------------------------------------------------------
+;-------------------------------------------------------
 ; INPUT() -> number. args: [RETURN], return: [number, RETURN]
 INPUT     START
           POP     GR7
@@ -77,17 +91,13 @@ INPUT     START
           LAD     GR2, #0001 ; GR2 = 10^i
           XOR     GR3, GR3 ; GR3 = result
           LD      GR4, MINUS
-          CPA     GR4, IBUF ; GR4 == '-'
-          JNZ     NEXT
-          LAD     GR4, 1 ; GR4 = 負の数(1)
-          ADDA    GR1, ONE ; i++
-NEXT      LAD     GR4, 0 ; GR4 = 正の数(0)
-; i = ILEN - 1, i >= 0; i--
-LOOP      CPA     GR1, =0
+LOOP      CPA     GR1, =0 ; i = ILEN - 1, i >= 0; i--
           JMI     BREAK ; i < 0 なら抜ける
-          LAD     GR5, #000F
-          AND     GR5, IBUF, GR1 ; GR5 = i桁目の数字
-
+          LD      GR5, IBUF, GR1
+          CPA     GR4, GR5 ; GR5 == 'c'?
+TEST      JZE     ISMINUS ; マイナスがあった場合ISMINUSにジャンプ
+          LAD     GR6, #000F ; 数字マスク
+          AND     GR5, GR6 ; GR5 = i桁目の数字
           PUSH    0, GR1 ; 退避
           PUSH    0, GR3 ; 退避
           PUSH    0, GR4 ; 退避
@@ -113,6 +123,8 @@ LOOP      CPA     GR1, =0
           ADDA    GR3, GR5 ; result += GR5
           SUBA    GR1, ONE ; i--
           JUMP    LOOP
+ISMINUS   XOR     GR3, MASK
+          ADDA    GR3, ONE
 BREAK     PUSH    0, GR3 ; result
           PUSH    0, GR7
           RET
@@ -121,6 +133,7 @@ ILEN      DS      1
 MINUS     DC      '-'
 ZERO      DC      0
 ONE       DC      1
+MASK      DC      #FFFF
           END
 
 ;-------------------------------------------------------
@@ -140,6 +153,7 @@ BREAK     ADDA    GR1, GR2
           PUSH    0, GR7 ; RETURN
           RET
           END
+
 ;-------------------------------------------------------
 ; MULT(a, b) -> a * b. args: [a, b, RETURN], return: [result, RETURN]
 MULT      START
