@@ -1,74 +1,206 @@
 MAIN      START
-          LD      GR1, =2
-          LD      GR2, =3
-          LAD     GR3, PROD
-          CALL    MULT
-          LD      GR1, PROD
-NEXT      LAD     GR1, IN1    ; 入力結果を入れてもらう番地
           CALL    INPUT
-          LD      GR1, IN1
-          JZE     FIN        ; 最初の入力が0なら終了
-          LAD     GR1, IN2    ; 入力結果を入れてもらう番地
-          CALL    INPUT
-          LD      GR1, IN1
-          LD      GR2, IN2
-          LAD     GR3, PROD
-          CALL    MULT
-          LD      GR1, PROD
           CALL    OUTPUT
-          JUMP    NEXT
-FIN       RET
-IN1       DS      1
-IN2       DS      1
-PROD      DS      1
+          RET
           END
 
-INPUT     START   ; GR1の番地に入力された数字を格納. ワーク変数= GR2: (i = 0; i < ILEN; i++) の i, GR3: 計算結果, GR4 はループで使う1桁の数字
-          IN      IBUF, ILEN
-          XOR     GR2, GR2
-          XOR     GR3, GR3
-INLOOP    CPA     GR2, ILEN
-          JZE     INFIN           ; GR2 == ILENならループ抜ける
-          LAD     GR4, #000F       ; 000FとのANDをとって下位の4ビットを取り出せば2進数になる
-          AND     GR4, IBUF, GR2    ; GR4 に(GR2)桁目の数字を格納
+;-------------------------------------------------------
+; OUTPUT(n) -> void. args: [n, RETURN], return: [RETURN]
+OUTPUT    START
+          POP     GR7
+          POP     GR1 ; 表示する数n
+          XOR     GR2, GR2 ; 文字数 len
+          XOR     GR5, GR5
+          CPA     GR1, ZERO
+          JPL     LOOP
+          LAD     GR5, 1 ; GR5=GR1が負(1)
+          XOR     GR1, MASK ; ビット反転
+          ADDA    GR1, =1
+LOOP      PUSH    0, GR2
+          PUSH    0, GR7
           PUSH    0, GR1
-          PUSH    0, GR2
+          LAD     GR3, 10 ; GR3 = 10
           PUSH    0, GR3
-          LD      GR1, GR4        ; MULT呼び出し準備
-          LD      GR2, =10
-          LAD     GR3, IPROD
-          CALL    MULT            ; GR4 *= 10
-          LD      GR4, IPROD
-          POP     GR7             ; 戻り番地をPOP
-          POP     GR3             ; レジスタを復帰
+          CALL    DIV
+          POP     GR3 ; GR3 = GR1 % 10
+          POP     GR1 ; GR1 = GR1 / 10
+          POP     GR7
           POP     GR2
-          POP     GR1
-          ADDA    GR3, GR4         ; GR3 += GR4
-          ADDA    GR2, =1         ; GR2 += 1
-          JUMP    INLOOP
-INFIN     ST      GR3, 0, GR1
+          LAD     GR4, #0030
+          ADDA    GR3, GR4; 数字を文字に変換(GR3 + #0030)
+          ST      GR3, OBUFINV, GR2 ; 文字を保存
+          LAD     GR2, 1, GR2 ; GR2(len)++
+          CPA     GR1, =0 ; a/b == 0ならば
+          JZE     BREAK
+          JUMP    LOOP
+BREAK     XOR     GR3, GR3 ; ループ変数 i
+          SUBA    GR2, =1 ; GR2はlengthで1多いので, 1引く
+          CPA     GR5, ZERO ; nが負の数である(GR5==1)ならば
+          JZE     LOOPINV
+          LD      GR4, MINUS
+          ST      GR4, OBUF, GR3
+          ADDA    GR3, =1
+LOOPINV   CPA     GR2, =0
+          JMI     FINISH
+          LD      GR4, OBUFINV, GR2 ; 順番入れ替え (OBUFINV -> OBUF)
+          ST      GR4, OBUF, GR3
+          SUBA    GR2, =1
+          ADDA    GR3, =1
+          JUMP    LOOPINV
+FINISH    ST      GR3, OLEN
+          OUT     OBUF, OLEN
+          PUSH    0, GR7
+          RET
+OBUF      DS      6
+OLEN      DS      1
+OBUFINV   DS      6 ; OBUFを逆順に並べたもの
+ZERO      DC      0
+MINUS     DC      '-'
+MASK      DC      #FFFF
+          END
+
+;region-------------------------------------------------------
+; INPUT() -> number. args: [RETURN], return: [number, RETURN]
+INPUT     START
+          POP     GR7
+          IN      IBUF, ILEN
+          LD      GR1, ILEN ; GR1 = i = ILEN (1桁目から始める)
+          SUBA    GR1, ONE ; i -= 1
+          LAD     GR2, #0001 ; GR2 = 10^i
+          XOR     GR3, GR3 ; GR3 = result
+          LD      GR4, MINUS
+;           CPA     GR4, IBUF ; GR4 == '-'
+;           JNZ     NEXT
+;           LAD     GR4, 1 ; GR4 = 負の数(1)
+;           ADDA    GR1, ONE ; i++
+; NEXT      LAD     GR4, 0 ; GR4 = 正の数(0)
+LOOP      CPA     GR1, =0 ; i = ILEN - 1, i >= 0; i--
+          JMI     BREAK ; i < 0 なら抜ける
+          LAD     GR5, #000F
+          AND     GR5, IBUF, GR1 ; GR5 = i桁目の数字
+          CPA     GR4, GR5 ; GR5 == 'c'?
+          JZE     ISMINUS ; マイナスがあった場合の処理
+          PUSH    0, GR1 ; 退避
+          PUSH    0, GR3 ; 退避
+          PUSH    0, GR4 ; 退避
+          PUSH    0, GR7
+          PUSH    0, GR2 ; 退避
+          PUSH    0, GR2 ; 10^i
+          PUSH    0, GR5 ; i桁目の数字
+          CALL    MULT
+          POP     GR5 ; かけ算結果
+          POP     GR2 ; 10^i
+          PUSH    0, GR5 ; GR2とGR5の順番入れ替え
+          PUSH    0, GR2
+          LAD     GR1, 10 ; 10をPUSH
+          PUSH    0, GR1
+          CALL    MULT
+          POP     GR2
+          POP     GR5
+          POP     GR7
+          POP     GR4 ; 復帰
+          POP     GR3 ; 復帰
+          POP     GR1 ; 復帰
+
+          ADDA    GR3, GR5 ; result += GR5
+          SUBA    GR1, ONE ; i--
+          JUMP    LOOP
+ISMINUS   XOR     GR3, MASK
+          ADDA    GR3, ONE
+BREAK     PUSH    0, GR3 ; result
+          PUSH    0, GR7
           RET
 IBUF      DS      6       ; -32768-32767なので6
 ILEN      DS      1
-IPROD     DS      1
+MINUS     DC      '-'
+ZERO      DC      0
+ONE       DC      1
+MASK      DC      #FFFF
           END
 
-MULT      START   ; GR1*GR2 の結果を GR3 の番地に格納. ワーク変数= GR4: 計算結果で初期値0
-                ; ex: 3 * 5 = (11) * (101). 11を2ビットシフトしたものと0ビットシフトしたものを足す (1100 + 11 = 1111)
-                ; アルゴリズム: GR2 と #0001 のANDをとる. 1ならGR4 += GR1する. GR1を左シフト, GR2を右シフト. GR2がゼロなら抜ける, そうでなければ初めに戻る
-          XOR     GR4, GR4         ; GR4を0初期化
-MULLOOP   AND     GR2, =1
-          JZE     MULNEXT         ;　1なら　GR4+=GR1
-          ADDA    GR4, GR1
-MULNEXT   SLA     GR1, 1
-          SRA     GR2, 1
-          CPA     GR2, =0          ; GR2が0なら抜ける
-          JZE     MULFIN
-          JUMP    MULLOOP
-MULFIN    ST      GR4, 0, GR3       ; GR3のアドレスにGR4を入れる
+;-------------------------------------------------------
+; DIV(a, b) -> [a / b, a % b]. args: [a, b, RETURN], return: [a / b, a % b, RETURN]
+DIV       START
+          POP     GR7 ;RETURN
+          POP     GR2 ;b
+          POP     GR1 ;a
+          XOR     GR3, GR3 ; 商
+LOOP      SUBA    GR1, GR2
+          JMI     BREAK
+          LAD     GR3, 1, GR3
+          JUMP    LOOP
+BREAK     ADDA    GR1, GR2
+          PUSH    0, GR3 ; 商 a/b
+          PUSH    0, GR1 ; 余り a%b
+          PUSH    0, GR7 ; RETURN
           RET
           END
+;-------------------------------------------------------
+; MULT(a, b) -> a * b. args: [a, b, RETURN], return: [result, RETURN]
+MULT      START
+          POP     GR7 ; GR7 = RETURN
+          POP     GR2 ; GR2 = b
+          POP     GR1 ; GR1 = a
 
-OUTPUT    START
+          LD      GR4, GR1 ; GR4 = 負の数かどうか
+          XOR     GR4, GR2
+          SRL     GR4, 15
+
+          PUSH    0, GR1
+          PUSH    0, GR4
+          PUSH    0, GR7
+          PUSH    0, GR2 ; b = |b|
+          CALL    ABS
+          POP     GR2
+          POP     GR7
+          POP     GR4
+          POP     GR1
+
+          PUSH    0, GR2
+          PUSH    0, GR4
+          PUSH    0, GR7
+          PUSH    0, GR1 ; a = |a|
+          CALL    ABS
+          POP     GR1
+          POP     GR7
+          POP     GR4
+          POP     GR2
+
+          XOR     GR3, GR3 ; GR3 = result
+
+LOOP      CPA     GR2, =0 ; b == 0 ?
+          JZE     BREAK ;b == 0なら抜ける
+          LD      GR5, GR2 ; bをGR4にコピー
+          AND     GR5, ONE ; b &= 1
+          JZE     NEXT ; b の1bit目が0ならNEXTへ
+          ADDA    GR3, GR1 ; result += a を左シフトしたもの
+NEXT      SRL     GR2, 1 ; b >> 1
+          SLL     GR1, 1 ; a << 1
+          JUMP    LOOP
+BREAK     CPA     GR4, ONE ; GR4が1 (aとbのどちらかが負) ならば
+          JNZ     NOTMINUS
+          XOR     GR3, MASK ; GR3を負にする
+          ADDA    GR3, ONE
+NOTMINUS  PUSH    0, GR3 ; result
+          PUSH    0, GR7 ; RETURN
           RET
+ONE       DC      1
+MASK      DC      #FFFF
+          END
+
+;-------------------------------------------------------
+; ABS(a) -> |a|. args: [a, RETURN], return: [|a|, RETURN]
+ABS       START
+          POP     GR7 ; GR7 = RETURN
+          POP     GR1 ; GR0 = a
+          CPA     GR1, ZERO
+          JPL     ONPLUS ; GR0 > 0 なら抜ける
+          XOR     GR1, MASK ; 符号反転
+          ADDA    GR1, ONE
+ONPLUS    PUSH    0, GR1
+          PUSH    0, GR7
+          RET
+ZERO      DC      0
+ONE       DC      1
+MASK      DC      #FFFF
           END
