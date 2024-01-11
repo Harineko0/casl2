@@ -1,5 +1,7 @@
 MAIN      START
           CALL    INPUT
+          CALL    INPUT
+          CALL    MULT
           CALL    OUTPUT
           RET
           END
@@ -76,10 +78,11 @@ INPUT     START
 ; NEXT      LAD     GR4, 0 ; GR4 = 正の数(0)
 LOOP      CPA     GR1, =0 ; i = ILEN - 1, i >= 0; i--
           JMI     BREAK ; i < 0 なら抜ける
-          LAD     GR5, #000F
-          AND     GR5, IBUF, GR1 ; GR5 = i桁目の数字
+          LD      GR5, IBUF, GR1
           CPA     GR4, GR5 ; GR5 == 'c'?
-          JZE     ISMINUS ; マイナスがあった場合の処理
+TEST      JZE     ISMINUS ; マイナスがあった場合ISMINUSにジャンプ
+          LAD     GR6, #000F ; 数字マスク
+          AND     GR5, GR6 ; GR5 = i桁目の数字
           PUSH    0, GR1 ; 退避
           PUSH    0, GR3 ; 退避
           PUSH    0, GR4 ; 退避
