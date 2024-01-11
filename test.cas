@@ -1,0 +1,14 @@
+PRG  START
+     LAD  GR1,0
+L1   LD GR2,A,GR1  ; 256, 257
+     CALL COUNT    ; 258, 259 
+     RET
+A    DC #0027
+     DC #F3A5
+COUNT START
+      LAD GR3,0
+      PUSH 0,GR1 ; (2)
+      LAD GR1,0
+      POP GR1 ; (3)
+      RET
+      END

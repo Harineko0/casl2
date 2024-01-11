@@ -1,0 +1,30 @@
+MAIN	START
+	LD	GR1,IN1		; GR1に1つめの引数を
+	PUSH	0,GR1		; スタックに1つめの引数をプッシュする
+	LD	GR1,IN2		; GR1に2つめの引数を
+	PUSH	0,GR1		; スタックに2つめの引数をプッシュする
+	CALL	ADDER
+	POP	GR3		; サブルーチンの答えをスタックからGR3にポップする
+	CPA	GR3,=5		; GR3が正しく5になっているかチェック
+	JNZ	NG
+	OUT	OKMSG,OKLEN
+	JUMP	FIN
+NG	OUT	NGMSG,NGLEN
+FIN	RET
+IN1	DC	3
+IN2	DC	2
+NGMSG	DC	'WRONG!'
+NGLEN	DC	6
+OKMSG	DC	'CORRECT!'
+OKLEN	DC	8
+	END
+
+ADDER	START
+	POP	GR7	  ; CALL命令実行後の戻り番地をGR7に待避する
+	POP	GR1	  ; 2つめの引数をGR1にポップする（プッシュ時と順序が逆になる）
+	POP	GR2	  ; 1つめの引数をGR2にポップする（プッシュ時と順序が逆になる）
+	ADDA	GR1,GR2	  ; 和を求める
+	PUSH	0,GR1	  ; 答えをスタックにプッシュする
+	PUSH	0,GR7	  ; CALL命令実行後の戻り番地をGR7からスタックに復帰する
+	RET
+	END
